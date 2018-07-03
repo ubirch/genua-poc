@@ -1,0 +1,11 @@
+[Unit]
+Description=ubirch-poc
+After=multi-user.target
+
+[Service]
+Type=idle
+ExecStart=/home/pi/genua-poc/controller/machine.py
+WorkingDirectory=/home/pi/genua-poc/python/
+
+[Install]
+WantedBy=multi-user.target
