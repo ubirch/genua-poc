@@ -86,7 +86,7 @@ class UbirchDevice(object):
             raise Exception("unsupported data type: json")
 
         r = requests.post(self.NOTARY_SERVICE + '/notarize',
-                          json={"data": binascii.hexlify(data[-64:]), "dataIsHash": True},
+                          json={"data": bytes.decode(binascii.hexlify(data[-64:])), "dataIsHash": True},
                           headers=self._auth)
         log.debug("{}: {}".format(r.status_code, r.content))
         if r.status_code == 200:
