@@ -166,7 +166,7 @@ int detectAndMeasure(MicroBitPin *pin) {
             uBit.display.image.setPixelValue(4, 4, uBit.display.image.getPixelValue(4, 4) ^ 0xFF);
         }
         detected = measured;
-    } while ((base != 0 && detected < 1) || lastDetected == detected);
+    } while (lastDetected == detected);
     lastDetected = detected;
     return detected;
 }
@@ -176,7 +176,7 @@ int detectAndMeasure(MicroBitPin *pin) {
  * @param pin the sensor pin
  */
 void calibrate(MicroBitPin *pin) {
-    int calib = detectAndMeasure(pin) * -1 - 1;
+    int calib = detectAndMeasure(pin) * -1;
     uBit.serial.printf("calibrate: %d\r\n", calib);
     base = calib;
     lastDetected = -1;
