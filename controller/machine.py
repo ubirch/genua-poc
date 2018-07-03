@@ -12,11 +12,10 @@ import msgpack
 
 from ubirch import CSerial, UbirchDevice
 
-logging.basicConfig(format='%(asctime)s %(name)20.20s %(levelname)-8.8s %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s %(name)20.20s %(levelname)-8.8s %(message)s', level=logging.DEBUG)
 
 log = logging.getLogger(__name__)
 log.info('ubirch Genua PoC (sensor)')
-
 
 class FactorySensor(CSerial):
     TYPE_REG_PACKET = 0x01
@@ -38,6 +37,7 @@ class FactorySensor(CSerial):
                 r = self._ubirch_device.register_identity(data)
                 if r.status_code >= 200 and r.status_code < 300:
                     log.info("ubirch: identity registered: {}".format(uuid))
+
             log.info("ubirch: device registration")
             if not self._ubirch_device.device_exists(uuid):
                 r = self._ubirch_device.create_device({
@@ -66,12 +66,14 @@ class FactorySensor(CSerial):
             log.info("anchored msg {} in blockchain".format(anchor_id))
         # send to firewall box
         try:
+            log.info("sending to {}".format(self.__fwbox))
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect(self.__fwbox)
-            s.send("{}|{}".format(anchor_id, data.hex()))
+            s.send(str.encode("{}|{}\n".format(anchor_id, data.hex())))
             s.close()
-        except:
-            log.error("data could not be send to fwbox")
+            log.info("sent")
+        except Exception as e:
+            log.error("data could not be send to fwbox: {}".format(e))
 
 
 config = configparser.ConfigParser()
