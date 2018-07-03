@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 import base64
+import binascii
 import configparser
 import hashlib
 import logging
@@ -69,8 +70,8 @@ class FactorySensor(CSerial):
             log.info("sending to {}".format(self.__fwbox))
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect(self.__fwbox)
-            log.info("{}|{}\n".format(anchor_id, data.hex()))
-            s.send(str.encode("{}|{}\n".format(anchor_id, data.hex())))
+            log.info("{}|{}\n".format(anchor_id, binascii.hexlify(data)))
+            s.send(str.encode("{}|{}\n".format(anchor_id, binascii.hexlify(data))))
             s.close()
             log.info("sent")
         except Exception as e:
