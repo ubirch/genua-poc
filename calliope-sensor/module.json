@@ -1,0 +1,12 @@
+{
+  "name": "calliope-sensor",
+  "version": "1.0.0",
+  "description": "calliope measurement station",
+  "license": "Apache 2.0",
+  "dependencies": {
+    "microbit": "calliope-mini/microbit#v2.0.0-calliope-1.0.5",
+    "ubirch-protocol-calliope": "ubirch/ubirch-protocol-calliope#master"
+  },
+  "targetDependencies": {},
+  "bin": "./source"
+}
