@@ -31,10 +31,12 @@ class UbirchDevice(object):
             self.KEY_SERVICE = "http://localhost:8095/api/keyService/v1".format(env)
             self.AVATAR_SERVICE = "http://localhost:8096/api/avatarService/v1".format(env)
             self.CHAIN_SERVICE = "http://localhost:8097/api/v1/chainService".format(env)
+            self.NOTARY_SERVICE = "https://localhost:8098/api/v1/notaryService".format(env)
         else:
             self.KEY_SERVICE = "https://key.{}.ubirch.com/api/keyService/v1".format(env)
             self.AVATAR_SERVICE = "https://api.ubirch.{}.ubirch.com/api/avatarService/v1".format(env)
             self.CHAIN_SERVICE = "https://api.ubirch.{}.ubirch.com/api/v1/chainService".format(env)
+            self.NOTARY_SERVICE = "http://n.dev.ubirch.com:8080/v1/notaryService/wallet-info".format(env)
 
     def is_identity_registered(self, serial: str) -> bool:
         r = requests.get(self.KEY_SERVICE + "/pubkey/current/hardwareId/" + serial)
@@ -85,8 +87,8 @@ class UbirchDevice(object):
 
         id = uuid.uuid4()
         log.info("anchor data in blockchain: {}".format(str(id)))
-        r = requests.post(self.CHAIN_SERVICE + '/tx/deviceMsgHash',
-                          json={"id": str(id), "hash": data[-64:].hex()},
+        r = requests.post(self.NOTARY_SERVICE + '/notarize',
+                          json={"data": data[-64:].hex(), "dataIsHash": True},
                           headers=self._auth)
         log.debug("{}: {}".format(r.status_code, r.content))
         if r.status_code == 200:
