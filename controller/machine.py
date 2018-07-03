@@ -54,13 +54,14 @@ class FactorySensor(CSerial):
                     log.info("ubirch: new device registered")
                 else:
                     log.error("ubirch: device registration failed")
+            self.handle_data_packet(data)
 
         elif len(unpacked) == 6:
             self.handle_data_packet(data)
         else:
             log.warning("unknown packet received")
 
-    def handle_data_packet(self, data: bytearray):
+    def handle_data_packet(self, data: bytes):
         # anchor message in blockchain
         anchor_id = self._ubirch_device.anchor(data)
         if anchor_id is not None:
