@@ -226,7 +226,7 @@ int main() {
         ubirch.startMessage()
                 .addMap(1)
                 .addMap((int) ts, 3)
-                .addMap("s", size)
+                .addInt("s", size)
                 .addInt("t", temperature)
                 .addInt("l", lightlevel);
         PacketBuffer packet = ubirch.finishMessage();
