@@ -69,6 +69,7 @@ class FactorySensor(CSerial):
             log.info("sending to {}".format(self.__fwbox))
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect(self.__fwbox)
+            log.info("{}|{}\n".format(anchor_id, data.hex()))
             s.send(str.encode("{}|{}\n".format(anchor_id, data.hex())))
             s.close()
             log.info("sent")

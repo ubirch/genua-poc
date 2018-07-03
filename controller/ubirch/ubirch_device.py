@@ -1,6 +1,5 @@
 import json
 import logging
-import uuid
 from logging import getLogger
 from uuid import UUID
 
@@ -36,7 +35,7 @@ class UbirchDevice(object):
             self.KEY_SERVICE = "https://key.{}.ubirch.com/api/keyService/v1".format(env)
             self.AVATAR_SERVICE = "https://api.ubirch.{}.ubirch.com/api/avatarService/v1".format(env)
             self.CHAIN_SERVICE = "https://api.ubirch.{}.ubirch.com/api/v1/chainService".format(env)
-            self.NOTARY_SERVICE = "http://n.dev.ubirch.com:8080/v1/notaryService/wallet-info".format(env)
+            self.NOTARY_SERVICE = "http://n.dev.ubirch.com:8080/v1/notaryService".format(env)
 
     def is_identity_registered(self, serial: str) -> bool:
         r = requests.get(self.KEY_SERVICE + "/pubkey/current/hardwareId/" + serial)
@@ -85,14 +84,12 @@ class UbirchDevice(object):
         if data.startswith(b'{'):
             raise Exception("unsupported data type: json")
 
-        id = uuid.uuid4()
-        log.info("anchor data in blockchain: {}".format(str(id)))
         r = requests.post(self.NOTARY_SERVICE + '/notarize',
                           json={"data": data[-64:].hex(), "dataIsHash": True},
                           headers=self._auth)
         log.debug("{}: {}".format(r.status_code, r.content))
         if r.status_code == 200:
-            return id
+            return r.json()['hash']
         else:
             return None
 
