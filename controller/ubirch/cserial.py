@@ -20,7 +20,7 @@ class CSerial():
         self._thread = Thread(target=self.run, daemon=True)
         self._thread.start()
 
-    def line(self, line: bytearray):
+    def line(self, line: bytes):
         """Implement this function to act on msgpack messages."""
         pass
 
@@ -40,7 +40,7 @@ class CSerial():
                             ser.write(b'\r\n')
                         elif line.startswith('9'):
                             try:
-                                self.line(bytearray.fromhex(line))
+                                self.line(bytes.fromhex(line))
                             except Exception as e:
                                 log.warning("decoding error: {}".format(e))
                         else:

@@ -28,7 +28,7 @@ class FactorySensor(CSerial):
         self._ubirch_auth = ubirch_auth
         self._ubirch_device = UbirchDevice(ubirch_auth, ubirch_env)
 
-    def line(self, data: bytearray):
+    def line(self, data: bytes):
         unpacked = msgpack.unpackb(data)
         if len(unpacked) == 5 and unpacked[2] == self.TYPE_REG_PACKET:
             uuid = str(UUID(bytes=unpacked[1]))
