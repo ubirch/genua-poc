@@ -71,8 +71,8 @@ class FactorySensor(CSerial):
             log.info("sending to {}".format(self.__fwbox))
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect(self.__fwbox)
-            log.info("{}|{}\n".format(anchor_id, binascii.hexlify(data)))
-            s.send(str.encode("{}|{}\n".format(anchor_id, bytes.decode(binascii.hexlify(data)))))
+            log.info("{}|{}".format(anchor_id, binascii.hexlify(data)))
+            s.send(str.encode("{}|{}".format(anchor_id, bytes.decode(binascii.hexlify(data)))))
             s.close()
             log.info("sent")
         except Exception as e:
