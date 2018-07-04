@@ -11,7 +11,7 @@ from uuid import UUID
 
 import msgpack
 
-from ubirch import CSerial, UbirchDevice
+from ubirch import CSerial, UbirchAPI
 
 logging.basicConfig(format='%(asctime)s %(name)20.20s %(levelname)-8.8s %(message)s', level=logging.DEBUG)
 
@@ -27,21 +27,21 @@ class FactorySensor(CSerial):
         self.__fwbox = fwbox
         self._ubirch_groups = ubirch_groups
         self._ubirch_auth = ubirch_auth
-        self._ubirch_device = UbirchDevice(ubirch_auth, ubirch_env)
+        self._ubirch_api = UbirchAPI(ubirch_auth, ubirch_env)
 
     def line(self, data: bytes):
         unpacked = msgpack.unpackb(data)
         if len(unpacked) == 5 and unpacked[2] == self.TYPE_REG_PACKET:
             uuid = str(UUID(bytes=unpacked[1]))
-            if not self._ubirch_device.is_identity_registered(uuid):
+            if not self._ubirch_api.is_identity_registered(uuid):
                 log.info("ubirch: identity registration: {}".format(uuid))
-                r = self._ubirch_device.register_identity(data)
+                r = self._ubirch_api.register_identity(data)
                 if r.status_code >= 200 and r.status_code < 300:
                     log.info("ubirch: identity registered: {}".format(uuid))
 
             log.info("ubirch: device registration")
-            if not self._ubirch_device.device_exists(uuid):
-                r = self._ubirch_device.create_device({
+            if not self._ubirch_api.device_exists(uuid):
+                r = self._ubirch_api.create_device({
                     "deviceId": uuid,
                     "deviceName": uuid,
                     "hwDeviceId": uuid,
@@ -58,7 +58,7 @@ class FactorySensor(CSerial):
 
         elif len(unpacked) == 6:
             # anchor message in blockchain
-            anchor_id = self._ubirch_device.anchor(data)
+            anchor_id = self._ubirch_api.anchor(data)
             if anchor_id is not None:
                 log.info("anchored msg {} in blockchain".format(anchor_id))
             self.handle_data_packet(data, anchor_id)

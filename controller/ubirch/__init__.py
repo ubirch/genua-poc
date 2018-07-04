@@ -1,2 +1,2 @@
 from .cserial import CSerial
-from .ubirch_device import UbirchDevice
+from .ubirch_api import UbirchAPI

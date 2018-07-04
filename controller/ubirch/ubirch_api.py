@@ -19,7 +19,8 @@ if True or log.level == logging.DEBUG:
     requests_log.propagate = True
 
 
-class UbirchDevice(object):
+class UbirchAPI(object):
+    """ubirch API accessor methods."""
     def __init__(self, auth=None, env=None) -> None:
         super().__init__()
         if auth is not None:
@@ -39,6 +40,7 @@ class UbirchDevice(object):
             self.NOTARY_SERVICE = "http://n.dev.ubirch.com:8080/v1/notaryService".format(env)
 
     def is_identity_registered(self, serial: str) -> bool:
+        """Check if  """
         r = requests.get(self.KEY_SERVICE + "/pubkey/current/hardwareId/" + serial)
         log.info("{}: {}".format(r.status_code, r.content))
         return r.status_code == 200 and r.json()
