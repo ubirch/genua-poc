@@ -1,3 +1,5 @@
 # Calliope Demo Code
 
-Connect the Calliope mini via USB to your PC and copy the `calliope-sensor-v1.0.hex` onto the MINI drive.
+Connect the Calliope mini via USB to your PC and copy the `calliope-sensor-v*.hex` onto the MINI drive.
+
+> If no ultrasonic sensor is connected, press A to trigger a measurement.
