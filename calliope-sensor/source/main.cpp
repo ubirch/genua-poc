@@ -139,7 +139,7 @@ int measureInCentimeters(MicroBitPin *pin) {
 
 static int lastDetected = -99;
 static int base = 0;
-
+static bool buttonAPressed = false;
 /**
  * Measure and detect the object size. Tries multiple times to avoid in-the-middle measurements.
  * @param pin the pin to control the sensor
@@ -164,6 +164,7 @@ int detectAndMeasure(MicroBitPin *pin) {
             uBit.sleep(100);
 
             uBit.display.image.setPixelValue(4, 4, uBit.display.image.getPixelValue(4, 4) ^ 0xFF);
+            if(buttonAPressed) return uBit.random(3)+1;
         }
         detected = measured;
     } while (lastDetected == detected);
@@ -182,11 +183,15 @@ void calibrate(MicroBitPin *pin) {
     lastDetected = -1;
 }
 
+void onButtonA(MicroBitEvent) {
+   buttonAPressed = true;
+}
+
 int main() {
     time_t ts;
 
     uBit.init();
-    uBit.serial.printf("ubirch protocol example v1.0\r\n");
+    uBit.serial.printf("ubirch protocol example v1.1\r\n");
 
     // we need to calibrate the distance sensor
     uBit.display.scroll("calibrate");
@@ -212,6 +217,8 @@ int main() {
     const int temperature = uBit.thermometer.getTemperature();
     const int lightlevel = uBit.display.readLightLevel();
 
+    uBit.messageBus.listen(MICROBIT_ID_BUTTON_A, MICROBIT_BUTTON_EVT_CLICK, onButtonA);
+
     // create consecutive messages and chain them, pressing reset will continue the chain
     while (true) {
         ts = get_system_time();
@@ -219,6 +226,7 @@ int main() {
         do {
             size = detectAndMeasure(&uBit.io.P2);
         } while (size < 1);
+        buttonAPressed = false;
 
         uBit.serial.printf("%d\r\n", size);
         uBit.display.print(size);
