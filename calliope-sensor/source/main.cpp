@@ -11,6 +11,8 @@
 #include <MicroBit.h>
 #include <CryptoUbirchProtocol.h>
 #include <ubirch/ubirch_protocol_kex.h>
+#include <ubirch/ubirch_ed25519.h>
+#include "handshake.h"
 
 MicroBit uBit;
 CryptoUbirchProtocol ubirch;
@@ -70,6 +72,8 @@ void loadOrGenerateKey() {
     if (kv_sk != NULL && kv_pk != NULL) {
         memcpy(ed25519_public_key, kv_pk->value, crypto_sign_PUBLICKEYBYTES);
         memcpy(ed25519_secret_key, kv_sk->value, crypto_sign_SECRETKEYBYTES);
+        delete kv_pk;
+        delete kv_sk;
     } else {
         crypto_sign_keypair(ed25519_public_key, ed25519_secret_key);
         uBit.storage.put("pk", ed25519_public_key, crypto_sign_PUBLICKEYBYTES);
@@ -183,6 +187,19 @@ void calibrate(MicroBitPin *pin) {
     lastDetected = -1;
 }
 
+class CalliopeSensorHandshake : UbirchHandshake {
+public:
+    explicit CalliopeSensorHandshake(BLEDevice &_ble) : UbirchHandshake(_ble) {
+        uBit.serial.send("enable BLE handshake");
+    }
+
+    void sign(uint8_t *buffer, size_t &size) override {
+        unsigned char signature[crypto_sign_BYTES];
+        ed25519_sign(buffer, size, signature);
+        memcpy(buffer, signature, crypto_sign_BYTES);
+    }
+};
+
 void onButtonA(MicroBitEvent) {
    buttonAPressed = true;
 }
@@ -199,9 +216,10 @@ int main() {
     uBit.display.print(base);
 
     // we need to set the current time, simply enter what `date +%s` gives you
-    uBit.serial.printf("TIME:\r\n");
-    ManagedString input = uBit.serial.readUntil(ManagedString("\r\n"), SYNC_SPINWAIT);
-    set_system_time(atoi(input.toCharArray()));
+//    uBit.serial.send("TIME:\r\n");
+//    ManagedString input = uBit.serial.readUntil(ManagedString("\r\n"), SYNC_SPINWAIT);
+//    set_system_time(atoi(input.toCharArray()));
+
     ts = get_system_time();
     uBit.serial.printf(ctime(&ts));
     uBit.serial.printf("\r\n");
@@ -209,6 +227,10 @@ int main() {
     // try to load the key from flash storage, or create a new one and save it
     // ATTENTION: flashing new firmware will delete all keys
     loadOrGenerateKey();
+
+    uBit.bleManager.advertise();
+    new CalliopeSensorHandshake(*uBit.ble);
+    uBit.serial.send("BLE handshake started\r\n");
 
     ubirch.reset(microbit_serial_number());
     // load the last generated signature

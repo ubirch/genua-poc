@@ -5,7 +5,7 @@
   "license": "Apache 2.0",
   "dependencies": {
     "microbit": "calliope-mini/microbit#v2.0.0-calliope-1.0.5",
-    "ubirch-protocol-calliope": "ubirch/ubirch-protocol-calliope#master"
+    "ubirch-protocol-calliope": "ubirch/ubirch-protocol-calliope#v1.0.0"
   },
   "targetDependencies": {},
   "bin": "./source"

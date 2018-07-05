@@ -31,9 +31,7 @@ file(GLOB MBED_INC
         yotta_modules/mbed-classic/targets/cmsis/TARGET_NORDIC/TARGET_MCU_NRF51822
         yotta_modules/mbed-classic/targets/hal/TARGET_NORDIC/TARGET_MCU_NRF51822
         yotta_modules/mbed-classic/targets/hal/TARGET_NORDIC/TARGET_MCU_NRF51822/TARGET_NRF51_CALLIOPE
-        yotta_modules/microbit-dal/yotta_modules/mbed-drivers
-        yotta_modules/microbit-dal/yotta_modules/minar
-        yotta_modules/microbit-dal/yotta_modules/ble
+        yotta_modules/ble
         )
 file(GLOB_RECURSE MBED_SRC
         yotta_modules/microbit-dal/yotta_modules/*.cpp
@@ -107,5 +105,8 @@ add_custom_target(compile
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
 
-add_executable(mstation source/main.cpp)
+add_executable(mstation
+        source/main.cpp
+        source/handshake.cpp
+        source/handshake.h)
 target_link_libraries(mstation ubirch-protocol-calliope)
