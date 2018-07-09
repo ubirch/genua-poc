@@ -14,7 +14,15 @@
 #include <ubirch/ubirch_ed25519.h>
 #include "handshake.h"
 
-MicroBit uBit;
+MicroBitSerial serial(TGT_TX, TGT_RX);
+MicroBitButton buttonA(MICROBIT_PIN_BUTTON_A, MICROBIT_ID_BUTTON_A);
+MicroBitDisplay display;
+MicroBitMessageBus messageBus;
+MicroBitStorage storage;
+MicroBitThermometer thermometer(storage);
+MicroBitBLEManager bleManager(storage);
+MicroBitPin P2(MICROBIT_ID_IO_P0, MICROBIT_PIN_P2, PIN_CAPABILITY_ALL);
+
 CryptoUbirchProtocol ubirch;
 time_t startTime;
 
@@ -32,8 +40,8 @@ time_t get_system_time() {
 
 // a little helper function to print the resulting byte arrays
 void hexprint(const uint8_t *b, size_t size) {
-    for (unsigned int i = 0; i < size; i++) uBit.serial.printf("%02x", b[i]);
-    uBit.serial.printf("\r\n");
+    for (unsigned int i = 0; i < size; i++) serial.printf("%02x", b[i]);
+    serial.printf("\r\n");
 }
 
 /**                                  x
@@ -41,16 +49,16 @@ void hexprint(const uint8_t *b, size_t size) {
  */
 void saveSignature() {
     PacketBuffer signature = ubirch.getLastSignature();
-    uBit.storage.put("s1", signature.getBytes(), 32);
-    uBit.storage.put("s2", signature.getBytes() + 32, 32);
+    storage.put("s1", signature.getBytes(), 32);
+    storage.put("s2", signature.getBytes() + 32, 32);
 }
 
 /**
  * Load the latest signature from flash (after reset).
  */
 void loadSignature() {
-    KeyValuePair *s1 = uBit.storage.get("s1");
-    KeyValuePair *s2 = uBit.storage.get("s2");
+    KeyValuePair *s1 = storage.get("s1");
+    KeyValuePair *s2 = storage.get("s2");
     if (s1 && s2) {
         uint8_t s[64];
         memcpy(s, s1->value, 32);
@@ -67,8 +75,8 @@ void loadSignature() {
  * Load the key pair from flash or generate a new one and store it away.
  */
 void loadOrGenerateKey() {
-    KeyValuePair *kv_pk = uBit.storage.get("pk");
-    KeyValuePair *kv_sk = uBit.storage.get("sk");
+    KeyValuePair *kv_pk = storage.get("pk");
+    KeyValuePair *kv_sk = storage.get("sk");
     if (kv_sk != NULL && kv_pk != NULL) {
         memcpy(ed25519_public_key, kv_pk->value, crypto_sign_PUBLICKEYBYTES);
         memcpy(ed25519_secret_key, kv_sk->value, crypto_sign_SECRETKEYBYTES);
@@ -76,8 +84,8 @@ void loadOrGenerateKey() {
         delete kv_sk;
     } else {
         crypto_sign_keypair(ed25519_public_key, ed25519_secret_key);
-        uBit.storage.put("pk", ed25519_public_key, crypto_sign_PUBLICKEYBYTES);
-        uBit.storage.put("sk", ed25519_secret_key, crypto_sign_SECRETKEYBYTES);
+        storage.put("pk", ed25519_public_key, crypto_sign_PUBLICKEYBYTES);
+        storage.put("sk", ed25519_secret_key, crypto_sign_SECRETKEYBYTES);
     }
 
     time_t t = get_system_time();
@@ -111,7 +119,7 @@ int pulseIn(MicroBitPin *pin, bool value, int maxDuration = 2000000) {
             return 0;
     }
     uint64_t end = system_timer_current_time_us();
-    return end - start;
+    return static_cast<int>(end - start);
 }
 
 static int distanceBackup;
@@ -131,7 +139,7 @@ int measureInCentimeters(MicroBitPin *pin) {
     wait_us(20);
     pin->setDigitalValue(0);
     duration = pulseIn(pin, true, 50000); // Max duration 50 ms
-    rangeInCentimeters = duration * 153 / 29.0 / 2.0 / 100;
+    rangeInCentimeters = static_cast<int>(duration * 153 / 29.0 / 2.0 / 100);
 
     if (rangeInCentimeters > 0) distanceBackup = rangeInCentimeters;
     else rangeInCentimeters = distanceBackup;
@@ -144,6 +152,7 @@ int measureInCentimeters(MicroBitPin *pin) {
 static int lastDetected = -99;
 static int base = 0;
 static bool buttonAPressed = false;
+
 /**
  * Measure and detect the object size. Tries multiple times to avoid in-the-middle measurements.
  * @param pin the pin to control the sensor
@@ -151,7 +160,7 @@ static bool buttonAPressed = false;
  */
 int detectAndMeasure(MicroBitPin *pin) {
     int detected = 0;
-    uBit.display.clear();
+    display.clear();
     do {
         int range = -1;
         int measured = 0;
@@ -165,10 +174,10 @@ int detectAndMeasure(MicroBitPin *pin) {
             } else {
                 cnt = 0;
             }
-            uBit.sleep(100);
+            fiber_sleep(100);
 
-            uBit.display.image.setPixelValue(4, 4, uBit.display.image.getPixelValue(4, 4) ^ 0xFF);
-            if(buttonAPressed) return uBit.random(3)+1;
+            display.image.setPixelValue(4, 4, static_cast<uint8_t>(display.image.getPixelValue(4, 4) ^ 0xFF));
+            if (buttonAPressed) return microbit_random(3) + 1;
         }
         detected = measured;
     } while (lastDetected == detected);
@@ -182,76 +191,82 @@ int detectAndMeasure(MicroBitPin *pin) {
  */
 void calibrate(MicroBitPin *pin) {
     int calib = detectAndMeasure(pin) * -1;
-    uBit.serial.printf("calibrate: %d\r\n", calib);
+    serial.printf("calibrate: %d\r\n", calib);
     base = calib;
     lastDetected = -1;
 }
 
 class CalliopeSensorHandshake : UbirchHandshake {
 public:
-    explicit CalliopeSensorHandshake(BLEDevice &_ble) : UbirchHandshake(_ble) {
-        uBit.serial.send("enable BLE handshake");
+    explicit CalliopeSensorHandshake(BLEDevice &_ble, unsigned char *publicKeyBytes, size_t publicKeySize)
+            : UbirchHandshake(_ble, publicKeyBytes, publicKeySize) {
+        serial.printf("enable BLE handshake");
     }
 
     void sign(uint8_t *buffer, size_t &size) override {
         unsigned char signature[crypto_sign_BYTES];
+        serial.printf("signing %d bytes", size);
         ed25519_sign(buffer, size, signature);
         memcpy(buffer, signature, crypto_sign_BYTES);
+        size = crypto_sign_BYTES;
+        serial.printf("done\r\n");
     }
 };
 
 void onButtonA(MicroBitEvent) {
-   buttonAPressed = true;
+    buttonAPressed = true;
 }
 
 int main() {
     time_t ts;
 
-    uBit.init();
-    uBit.serial.printf("ubirch protocol example v1.1\r\n");
+    serial.printf("ubirch protocol example v1.1\r\n");
 
     // we need to calibrate the distance sensor
-    uBit.display.scroll("calibrate");
-    calibrate(&uBit.io.P2);
-    uBit.display.print(base);
+    display.scroll("calibrate");
+
+    calibrate(&P2);
+    display.print(base);
 
     // we need to set the current time, simply enter what `date +%s` gives you
-//    uBit.serial.send("TIME:\r\n");
-//    ManagedString input = uBit.serial.readUntil(ManagedString("\r\n"), SYNC_SPINWAIT);
+//    serial.printf("TIME:\r\n");
+//    ManagedString input = serial.readUntil(ManagedString("\r\n"), SYNC_SPINWAIT);
 //    set_system_time(atoi(input.toCharArray()));
 
     ts = get_system_time();
-    uBit.serial.printf(ctime(&ts));
-    uBit.serial.printf("\r\n");
+    serial.printf(ctime(&ts));
+    serial.printf("\r\n");
 
     // try to load the key from flash storage, or create a new one and save it
     // ATTENTION: flashing new firmware will delete all keys
     loadOrGenerateKey();
 
-    uBit.bleManager.advertise();
-    new CalliopeSensorHandshake(*uBit.ble);
-    uBit.serial.send("BLE handshake started\r\n");
+    bleManager.init(microbit_friendly_name(), "", messageBus, true);
+    new CalliopeSensorHandshake(*bleManager.ble, ed25519_public_key, crypto_sign_PUBLICKEYBYTES);
+    bleManager.advertise();
+    serial.printf("BLE handshake started\r\n");
 
     ubirch.reset(microbit_serial_number());
     // load the last generated signature
     loadSignature();
 
-    const int temperature = uBit.thermometer.getTemperature();
-    const int lightlevel = uBit.display.readLightLevel();
+    const int temperature = thermometer.getTemperature();
+    const int lightlevel = display.readLightLevel();
 
-    uBit.messageBus.listen(MICROBIT_ID_BUTTON_A, MICROBIT_BUTTON_EVT_CLICK, onButtonA);
+    scheduler_init(messageBus);
+    messageBus.listen(MICROBIT_ID_BUTTON_A, MICROBIT_BUTTON_EVT_CLICK, onButtonA);
 
     // create consecutive messages and chain them, pressing reset will continue the chain
     while (true) {
         ts = get_system_time();
         int size = 0;
         do {
-            size = detectAndMeasure(&uBit.io.P2);
+            size = detectAndMeasure(&P2);
         } while (size < 1);
         buttonAPressed = false;
 
-        uBit.serial.printf("%d\r\n", size);
-        uBit.display.print(size);
+        serial.printf("%d\r\n", size);
+        display.print(size);
         // structure: {"data": {1234: {"t":1234, "l":1234}}}
         ubirch.startMessage()
                 .addMap(1)

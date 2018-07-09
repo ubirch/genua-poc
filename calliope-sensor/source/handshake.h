@@ -7,10 +7,11 @@
 // UUIDs for our service and characteristics
 extern const uint8_t HandshakeServiceUUID[];
 extern const uint8_t HandshakeCharacteristicsUUID[];
+extern const uint8_t PublicKeyCharacteristicsUUID[];
 
 class UbirchHandshake {
 public:
-    explicit UbirchHandshake(BLEDevice &_ble);
+    explicit UbirchHandshake(BLEDevice &_ble, unsigned char *publicKeyBytes, size_t publicKeySize);
 
     /**
      * Implement to sign the nonce sent to this device
