@@ -5,7 +5,7 @@ After=multi-user.target
 [Service]
 Type=idle
 ExecStart=/home/pi/genua-poc/controller/machine.py
-WorkingDirectory=/home/pi/genua-poc/python/
+WorkingDirectory=/home/pi/genua-poc/controller/
 
 [Install]
 WantedBy=multi-user.target

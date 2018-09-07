@@ -39,10 +39,10 @@ class CSerial():
                             ser.write(str.encode(str(int(datetime.now().timestamp()))))
                             ser.write(b'\r\n')
                         elif line.startswith('9'):
-                            try:
+                            #try:
                                 self.line(bytes.fromhex(line))
-                            except Exception as e:
-                                log.warning("decoding error: {}".format(e))
+                            #except Exception as e:
+                                #log.warning("decoding error: {}".format(e))
                         else:
                             continue
 
